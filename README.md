@@ -4,10 +4,9 @@ GrandaDB is designed to support managing **g**raph, **r**el**a**tio**n**al, and 
 
 ## 2. Overview
 ### 2.1 Repository Organization
-```bash
-.
+```shell
 ├── Datasets		# datasets for m2bench
-├── Impl			# data load methods and query tasks with SF = 1, 2, 5, 10
+├── Impl		# data load methods and query tasks with SF = 1, 2, 5, 10
 │   ├── agensgraph
 │   ├── arangodb
 │   └── grandadb
@@ -21,7 +20,7 @@ GrandaDB is designed to support managing **g**raph, **r**el**a**tio**n**al, and 
 We evaluate GrandaDB’s performance on graph-centric cross-model queries and analytical workloads using tasks from [M2Bench](https://github.com/snu-dbs/m2bench), and compare it against the state-of-the-art multi-model databases [ArangoDB](https://github.com/arangodb/arangodb) and [AgensGraph](https://github.com/skaiworldwide-oss/agensgraph). All required datasets are available at: https://github.com/snu-dbs/m2bench.
 ### 2.3 Experiment Environment
 **Hardware:**
-- CPU：Intel(R) Xeon(R) Gold 5320 CPU @ 2.20GHz (*2)
+- CPU: Intel(R) Xeon(R) Gold 5320 CPU @ 2.20GHz (*2)
 - 512GB of DDR4 memory
 - Samsung SSD 870 3.7TB
 
@@ -33,7 +32,7 @@ We evaluate GrandaDB’s performance on graph-centric cross-model queries and an
 We only provide the deployment process for GrandaDB. For ArangoDB and AgensGraph, readers can refer to their official deployment guides. Before starting, create a new directory for GrandaDB: `mkdir granda`, and then navigate into the directory with `cd granda`.
 ### 3.1 GCC Installation
 - Download, compile, and install:
-	```bash
+	```shell
 	mkdir local
 	cd local
 	# Download and decompress the source code of GCC 10.3
@@ -119,7 +118,7 @@ After installing GrandaDB, the PostGIS extension needs to be installed; details 
 - Organize all the datasets within the format shown in the `Dataset/` directory.
 - Load all the data by running `/path_to_repo/Impl/grandadb/load_datasets/impport.sh`. Before that, modify the `PORT` as what you set in the configure file.
 	```bash
-	nohup bash Impl/Helmdb/load_datasets/import.sh &
+	nohup bash Impl/grandadb/load_datasets/import.sh &
 	```
 ### 4.2 Run Tasks
 Modify the `PORT` as specified in the configuration file for the executable, and then run:
@@ -138,5 +137,5 @@ It will include the query results for a total of 17 tasks, with the query time t
 ```bash
 real	0m25.075s
 user	0m0.011s
-sys		0m0.008s
+sys	0m0.008s
 ```
