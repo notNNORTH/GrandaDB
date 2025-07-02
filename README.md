@@ -13,7 +13,6 @@ GrandaDB is designed to support managing **g**raph, **r**el**a**tio**n**al, and 
 ├── LICENSE
 ├── README.md
 ├── Tasks
-├── functional_test	# functional tests for GrandaDB
 └── postgresql.conf	# configure file for GrandaDB
 ```
 ### 2.2 Benchmark
