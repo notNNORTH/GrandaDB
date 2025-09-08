@@ -1,4 +1,5 @@
 DATA_PATH=$(pwd)/../../../Datasets/
+rm -rf /tmp/m2bench/
 mkdir -p /tmp/m2bench/
 ln -s $DATA_PATH/ecommerce /tmp/m2bench/ 2>&1 >& /dev/null
 ln -s $DATA_PATH/healthcare /tmp/m2bench/ 2>&1 >& /dev/null 

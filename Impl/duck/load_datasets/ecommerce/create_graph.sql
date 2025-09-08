@@ -1,52 +1,55 @@
-\c ecommerce;
 
-CREATE EXTENSION IF NOT EXISTS file_fdw;
-CREATE SERVER IF NOT EXISTS import_server FOREIGN DATA WRAPPER file_fdw;
+DROP TABLE IF EXISTS person;
+DROP TABLE IF EXISTS follows;
+DROP TABLE IF EXISTS hashtag;
+DROP TABLE IF EXISTS interested_in;
 
-DROP FOREIGN TABLE IF EXISTS person;
-DROP FOREIGN TABLE IF EXISTS follows;
-DROP FOREIGN TABLE IF EXISTS hashtag;
-DROP FOREIGN TABLE IF EXISTS interested_in;
--- DROP GRAPH social_network cascade;
-
-CREATE FOREIGN TABLE IF NOT EXISTS person(
-        person_id int,
-        gender char(1),
-        date_of_brith date,
-        firstname varchar(20),
-        lastname varchar(20),
-        nationality varchar(20),
-        email varchar(50)
-        )
-SERVER import_server
-OPTIONS (FORMAT 'csv', HEADER 'true', FILENAME '../../../../Datasets/ecommerce/property_graph/person_node.csv', DELIMITER '|');
+LOAD duckpgq;
 
 
-CREATE FOREIGN TABLE IF NOT EXISTS follows(
-        _from int,
-        _to int,
-        created_time timestamp
-        )
-SERVER import_server
-OPTIONS (FORMAT 'csv', HEADER 'true', FILENAME '../../../../Datasets/ecommerce/property_graph/person_follows_person.csv', DELIMITER '|');
+CREATE TABLE person(
+    person_id INTEGER,
+    gender CHAR(1),
+    date_of_birth DATE,
+    firstname VARCHAR(20),
+    lastname VARCHAR(20),
+    nationality VARCHAR(20),
+    email VARCHAR(50)
+);
+
+CREATE TABLE hashtag(
+    tag_id INTEGER,
+    content VARCHAR(30)
+);
 
 
-CREATE FOREIGN TABLE IF NOT EXISTS hashtag(
-        tag_id int,
-        content varchar(30)
-        )
-SERVER import_server
-OPTIONS (FORMAT 'csv', HEADER 'true', FILENAME '../../../../Datasets/ecommerce/property_graph/hashtag_node.csv', DELIMITER ',');
+CREATE TABLE follows(
+    _from INTEGER,
+    _to INTEGER,
+    created_time TIMESTAMP
+);
+
+CREATE TABLE interested_in(
+    _from INTEGER,
+    _to INTEGER,
+    created_time CHAR(20)
+);
 
 
-CREATE FOREIGN TABLE IF NOT EXISTS interested_in(
-        _from int,
-        _to int,
-        created_time char(20)
-        )
-SERVER import_server
-OPTIONS (FORMAT 'csv', HEADER 'true', FILENAME '../../../../Datasets/ecommerce/property_graph/person_interestedIn_tag.csv', DELIMITER ',');
+COPY person FROM '/tmp/m2bench/ecommerce/property_graph/person_node.csv' (FORMAT CSV, HEADER, DELIMITER '|');
+COPY follows FROM '/tmp/m2bench//ecommerce/property_graph/person_follows_person.csv' (FORMAT CSV, HEADER, DELIMITER '|');
+COPY hashtag FROM '/tmp/m2bench/ecommerce/property_graph/hashtag_node.csv' (FORMAT CSV, HEADER, DELIMITER ',');
+COPY interested_in FROM '/tmp/m2bench/ecommerce/property_graph/person_interestedIn_tag.csv' (FORMAT CSV, HEADER, DELIMITER ',');
 
 
-CREATE GRAPH social_network;
+DROP PROPERTY GRAPH IF EXISTS social_network;
 
+CREATE PROPERTY GRAPH social_network
+  VERTEX TABLES (
+    person,
+    hashtag
+  )
+  EDGE TABLES (
+    follows SOURCE KEY (_from) REFERENCES person (person_id) DESTINATION KEY (_to) REFERENCES person (person_id),
+    interested_in SOURCE KEY (_from) REFERENCES person (person_id) DESTINATION KEY (_to) REFERENCES hashtag (tag_id)
+  );
