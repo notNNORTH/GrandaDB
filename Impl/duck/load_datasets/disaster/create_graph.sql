@@ -1,25 +1,32 @@
-\c disaster;
-  
-CREATE EXTENSION IF NOT EXISTS file_fdw;
-CREATE SERVER IF NOT EXISTS test FOREIGN DATA WRAPPER file_fdw;
+LOAD duckpgq;
 
-DROP FOREIGN TABLE IF EXISTS Roadnodes;
-DROP FOREIGN TABLE IF EXISTS Roads;
-DROP GRAPH Road_network CASCADE;
 
-CREATE FOREIGN TABLE IF NOT EXISTS Roadnodes (
-        roadnode_id INT,
-        site_id INT
-        )
-SERVER test
-OPTIONS (FORMAT 'csv', HEADER 'true', FILENAME '../../../../Datasets/disaster/property_graph/Roadnode.csv', delimiter',');
+DROP TABLE IF EXISTS Roadnodes;
+DROP TABLE IF EXISTS Roads;
+DROP PROPERTY GRAPH IF EXISTS Road_network;
 
-CREATE FOREIGN TABLE IF NOT EXISTS Roads (
-        _from INT,
-        _to INT,
-        distance INT
-        )
-SERVER test
-OPTIONS (FORMAT 'csv', HEADER 'true', FILENAME '../../../../Datasets/disaster/property_graph/Road.csv', delimiter',');
 
-CREATE GRAPH Road_network;
+CREATE TABLE Roadnodes (
+    roadnode_id INT PRIMARY KEY,
+    site_id INT
+);
+
+CREATE TABLE Roads (
+    _from INT,
+    _to INT,
+    distance INT
+);
+
+
+COPY Roadnodes FROM '/tmp/m2bench/disaster/property_graph/Roadnode.csv' (FORMAT CSV, HEADER, DELIMITER ',');
+COPY Roads FROM '/tmp/m2bench/disaster/property_graph/Road.csv' (FORMAT CSV, HEADER, DELIMITER ',');
+
+
+CREATE PROPERTY GRAPH Road_network
+VERTEX TABLES (
+    Roadnodes
+)
+EDGE TABLES (
+    Roads SOURCE KEY (_from) REFERENCES Roadnodes(roadnode_id)
+          DESTINATION KEY (_to) REFERENCES Roadnodes(roadnode_id)
+);
