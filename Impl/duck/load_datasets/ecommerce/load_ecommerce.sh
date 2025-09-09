@@ -1,3 +1,5 @@
+# change the `./duckdb_cli/duckdb` to your path to duckdb
+rm -f ecommerce.duckdb
 ./duckdb_cli/duckdb ecommerce.duckdb -c "CREATE SCHEMA IF NOT EXISTS ecommerce;"
 
 ./duckdb_cli/duckdb ecommerce.duckdb -f create_table.sql

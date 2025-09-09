@@ -1,12 +1,13 @@
-agens -d postgres  -c "CREATE DATABASE IF NOT EXISTS healthcare;" -p 5678
-agens -p 5678 -d healthcare -f ./create_table.sql
-agens -p 5678 -d healthcare -f ./load_table.sql
+rm -f healthcare.duckdb
+./duckdb_cli/duckdb healthcare.duckdb -c "CREATE SCHEMA IF NOT EXISTS healthcare;"
+
+./duckdb_cli/duckdb healthcare.duckdb -f create_table.sql
+./duckdb_cli/duckdb healthcare.duckdb -f load_table.sql
 
 
-agens -p 5678 -d healthcare -f ./create_json.sql
-agens -p 5678 -d healthcare -f ./load_json.sql
+./duckdb_cli/duckdb healthcare.duckdb -f create_json.sql
+./duckdb_cli/duckdb healthcare.duckdb -f load_json.sql
 
 
-agens -p 5678 -d healthcare -f ./create_graph.sql
-agens -p 5678 -d healthcare -f ./load_graph.sql
+./duckdb_cli/duckdb healthcare.duckdb -f create_graph.sql
 
