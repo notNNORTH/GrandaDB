@@ -1,102 +1,105 @@
-SET graph_path = social_network;
+LOAD duckpgq;
 
-CREATE TEMPORARY TABLE TNEW_D (person_id INT, tag_id INT, val DOUBLE PRECISION);
-CREATE INDEX ON TNEW_D(person_id, tag_id);
-CREATE INDEX ON TNEW_D(tag_id);
-CREATE INDEX ON TNEW_D(person_id);
+CREATE TEMP TABLE TNEW_D (person_id INTEGER, tag_id INTEGER, val DOUBLE);
+CREATE INDEX TNEW_D_person_tag_idx ON TNEW_D(person_id, tag_id);
+CREATE INDEX TNEW_D_tag_idx ON TNEW_D(tag_id);
+CREATE INDEX TNEW_D_person_idx ON TNEW_D(person_id);
 
-CREATE TEMPORARY TABLE TNEW_E (person_id INT, val DOUBLE PRECISION);
-CREATE INDEX ON TNEW_E(person_id);
+CREATE TEMP TABLE TNEW_E (person_id INTEGER, val DOUBLE);
+CREATE INDEX TNEW_E_person_idx ON TNEW_E(person_id);
 
-DROP TABLE TEMP_w;
-CREATE TABLE TEMP_w (i INT, val DOUBLE PRECISION);
-CREATE INDEX ON TEMP_w(i);
+DROP TABLE IF EXISTS TEMP_w;
+CREATE TABLE TEMP_w (i INTEGER, val DOUBLE);
+CREATE INDEX TEMP_w_i_idx ON TEMP_w(i);
 
-CREATE TEMPORARY TABLE TEMP_w_new (i INT, val DOUBLE PRECISION);
+CREATE TEMP TABLE TEMP_w_new (i INTEGER, val DOUBLE);
 
--- Fill temp_w first
+-- Fill TEMP_w
 INSERT INTO TEMP_w
-SELECT SEQ.i AS i, 1 AS val FROM (SELECT generate_series(0, 300 - 1) AS i) AS SEQ;
--- SELECT SEQ.i AS i, random() AS val FROM (SELECT generate_series(0, 300 - 1) AS i) AS SEQ;
-
+SELECT i, 1.0 AS val
+FROM range(0, 300) tbl(i);
 
 -- Create A
-CREATE TEMPORARY TABLE TNEW_A AS (
-	SELECT CAST(CAST(person_id AS varchar(20)) AS int), CAST(CAST(tag_id AS varchar(20)) AS int) 
-	FROM (MATCH (p: Person)-[:Interested_in]->(t: Hashtag) RETURN p.person_id, t.tag_id) AS a
-	GROUP BY person_id, tag_id
-);
+CREATE TEMP TABLE TNEW_A AS
+SELECT CAST(person_id AS INTEGER) AS person_id,
+       CAST(tag_id AS INTEGER) AS tag_id
+FROM GRAPH_TABLE(social_network
+    MATCH (p:Person)-[i:Interested_in]->(t:Hashtag)
+    COLUMNS (p.person_id AS person_id, t.tag_id AS tag_id)
+)
+GROUP BY person_id, tag_id;
 
 -- Create C
-CREATE TEMPORARY TABLE TNEW_C AS (
-	WITH B AS (
-		SELECT customer.person_id, product.brand_id, COUNT(*) as cnt
-		FROM product, review, "order", customer
-		WHERE customer.customer_id = "order".data->>'customer_id' AND
-		"order".data->>'order_id' = review.data->>'order_id' AND
-		review.data->>'product_id' = product.product_id AND
-		CAST(review.data->>'rating' AS INT) = 5
-		GROUP BY customer.person_id, product.brand_id)
-
-	SELECT B.person_id, MIN(B.brand_id) AS brand_id
-	FROM B, (SELECT person_id, MAX(cnt) as max_cnt FROM B GROUP BY person_id) AS T1
-	WHERE B.person_id = T1.person_id AND
-	B.cnt = T1.max_cnt
-	GROUP BY B.person_id
+CREATE TEMP TABLE TNEW_C AS(
+    WITH B AS (
+        SELECT c.person_id, p.brand_id, COUNT(*) as cnt
+        FROM product p
+        JOIN review r ON p.product_id = json_extract_string(r.json, '$.product_id')
+        JOIN "order" o ON json_extract_string(o.json, '$.order_id') = json_extract_string(r.json, '$.order_id')
+        JOIN customer c ON c.customer_id = json_extract_string(o.json, '$.customer_id')
+        WHERE CAST(json_extract_string(r.json, '$.rating') AS INT) = 5
+        GROUP BY c.person_id, p.brand_id
+    )
+    SELECT B.person_id, MIN(B.brand_id) AS brand_id
+    FROM B
+    JOIN (
+        SELECT person_id, MAX(cnt) AS max_cnt
+        FROM B
+        GROUP BY person_id
+    ) AS T1
+    ON B.person_id = T1.person_id
+    AND B.cnt = T1.max_cnt
+    GROUP BY B.person_id
 );
 
 -- Create D
 INSERT INTO TNEW_D
-SELECT 
-	DENSE.person_id AS person_id,
-	DENSE.tag_id AS tag_id,
-	CASE
-		WHEN TNEW_A.person_id IS NULL THEN 0
-		ELSE 1
-	END AS val
-FROM (SELECT (SEQ.i / 300) AS person_id, (SEQ.i % 300) AS tag_id 
-FROM (SELECT generate_series(0, 2984700 - 1) AS i) AS SEQ) AS DENSE 
-LEFT JOIN 
-	TNEW_A
-	ON TNEW_A.person_id = DENSE.person_id AND TNEW_A.tag_id = DENSE.tag_id;
+SELECT d.person_id,
+       d.tag_id,
+       CASE WHEN a.person_id IS NULL THEN 0 ELSE 1 END AS val
+FROM (
+    SELECT (i / 300) AS person_id, (i % 300) AS tag_id
+    FROM range(0, 2984700) tbl(i)
+) d
+LEFT JOIN TNEW_A a
+ON a.person_id = d.person_id AND a.tag_id = d.tag_id;
 
 -- Create E
-INSERT INTO TNEW_E 
-SELECT 
-	DENSE.person_id AS person_id,
-	CASE
-		WHEN TNEW_C.person_id IS NULL THEN 0
-		WHEN TNEW_C.brand_id = 50 THEN 1
-		ELSE 0
-	END AS val
-FROM (SELECT SEQ.i AS person_id 
-	FROM (SELECT generate_series(0, 9949 - 1) AS i) AS SEQ) AS DENSE 
-LEFT JOIN 
-	TNEW_C
-	ON TNEW_C.person_id = DENSE.person_id;
-
+INSERT INTO TNEW_E
+SELECT d.i AS person_id,
+       CASE 
+           WHEN c.person_id IS NULL THEN 0
+           WHEN c.brand_id = 50 THEN 1
+           ELSE 0 
+       END AS val
+FROM range(0, 9949) AS d(i)
+LEFT JOIN TNEW_C c
+ON c.person_id = d.i;
 
 -- iteration
-SET enable_mergejoin=off;
-SET enable_nestloop=off;
-CREATE TEMPORARY TABLE Xw AS (
-	SELECT TNEW_D.person_id AS person_id, SUM(TNEW_D.val * TEMP_w.val) AS val
-	FROM TNEW_D, TEMP_w
-	WHERE TNEW_D.tag_id = TEMP_w.i
-	GROUP BY TNEW_D.person_id
-);
+CREATE TEMP TABLE Xw AS
+SELECT d.person_id,
+       SUM(d.val * w.val) AS val
+FROM TNEW_D d
+JOIN TEMP_w w ON d.tag_id = w.i
+GROUP BY d.person_id;
 
-SET enable_mergejoin=on;
-SET enable_nestloop=on;
 INSERT INTO TEMP_w_new
-SELECT TEMP_w.i AS i, (TEMP_w.val - OLD.val) AS val
-FROM (SELECT TNEW_D.tag_id AS i, 0.0001 * SUM(DIFF.val * TNEW_D.val) AS val
-	FROM (SELECT Xw.person_id AS person_id, (1 / (1 + EXP(-1 * Xw.val))) - TNEW_E.val AS val 
-		FROM Xw, TNEW_E
-		WHERE Xw.person_id = TNEW_E.person_id) AS DIFF, TNEW_D
-	WHERE TNEW_D.person_id = DIFF.person_id
-	GROUP BY TNEW_D.tag_id) AS OLD, TEMP_w
-WHERE OLD.i = TEMP_w.i;
+SELECT w.i,
+       (w.val - o.val) AS val
+FROM (
+    SELECT d.tag_id AS i,
+           0.0001 * SUM(diff.val * d.val) AS val
+    FROM (
+        SELECT x.person_id,
+               (1.0 / (1 + exp(-1 * x.val))) - e.val AS val
+        FROM Xw x
+        JOIN TNEW_E e ON x.person_id = e.person_id
+    ) diff
+    JOIN TNEW_D d ON d.person_id = diff.person_id
+    GROUP BY d.tag_id
+) o
+JOIN TEMP_w w ON o.i = w.i;
 
 DELETE FROM TEMP_w;
 

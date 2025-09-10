@@ -6,7 +6,6 @@ rm -f ecommerce.duckdb
 ./duckdb_cli/duckdb ecommerce.duckdb -f load_table.sql
 
 ./duckdb_cli/duckdb ecommerce.duckdb -f create_json.sql
-./duckdb_cli/duckdb ecommerce.duckdb -f load_json.sql
 
 ./duckdb_cli/duckdb ecommerce.duckdb -f create_graph.sql
 
